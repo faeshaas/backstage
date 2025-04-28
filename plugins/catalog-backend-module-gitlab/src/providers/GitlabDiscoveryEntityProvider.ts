@@ -40,13 +40,9 @@ import {
 } from '../lib';
 
 import * as path from 'path';
+import { GitLabFile } from '../lib/types';
 
 const TOPIC_REPO_PUSH = 'gitlab.push';
-
-type Result = {
-  scanned: number;
-  matches: GitLabProject[];
-};
 
 /**
  * Discovers catalog files located in your GitLab instance.
@@ -207,35 +203,44 @@ export class GitlabDiscoveryEntityProvider implements EntityProvider {
       );
     }
 
-    const projects = paginated<GitLabProject>(
-      options => this.gitLabClient.listProjects(options),
-      {
-        group: this.config.group,
-        page: 1,
-        per_page: 50,
-        ...(!this.config.includeArchivedRepos && { archived: false }),
-        ...(this.config.membership && { membership: true }),
-        ...(this.config.topics && { topics: this.config.topics }),
-      },
-    );
+    const projects = [];
+    projects.push(this.gitLabClient.getProjectById(3927));
+    projects.push(this.gitLabClient.getProjectById(2229));
+    projects.push(this.gitLabClient.getProjectById(3737));
 
-    const res: Result = {
-      scanned: 0,
-      matches: [],
-    };
+    // const projects = paginated<GitLabProject>(
+    //   options => this.gitLabClient.listProjects(options),
+    //   {
+    //     group: this.config.group,
+    //     page: 1,
+    //     per_page: 50,
+    //     ...(!this.config.includeArchivedRepos && { archived: false }),
+    //     ...(this.config.membership && { membership: true }),
+    //     ...(this.config.topics && { topics: this.config.topics }),
+    //   },
+    // );
+
+    let scanned = 0;
+
+    const locations: LocationSpec[] = [];
 
     for await (const project of projects) {
-      if (await this.shouldProcessProject(project, this.gitLabClient)) {
-        res.scanned++;
-        res.matches.push(project);
+      const namespace = project.path_with_namespace ?? '';
+
+      if (this.shouldProcessRecursively(namespace)) {
+        await this.processProjectRecursively(project, namespace, locations);
+        scanned++;
+      } else if (await this.shouldProcessProject(project, this.gitLabClient)) {
+        locations.push(
+          this.createLocationSpec(project, this.config.catalogFile),
+        );
+        scanned++;
       }
     }
-
-    const locations = res.matches.map(p => this.createLocationSpec(p));
-
     logger.info(
-      `Processed ${locations.length} from scanned ${res.scanned} projects.`,
+      `Processed ${locations.length} from scanned ${scanned} projects.`,
     );
+
     await this.connection.applyMutation({
       type: 'full',
       entities: locations.map(location => ({
@@ -245,7 +250,42 @@ export class GitlabDiscoveryEntityProvider implements EntityProvider {
     });
   }
 
-  private createLocationSpec(project: GitLabProject): LocationSpec {
+  private shouldProcessRecursively(namespace: string): boolean {
+    return this.config.fullDiscoveryRepos?.includes(namespace) ?? false;
+  }
+
+  private async processProjectRecursively(
+    project: GitLabProject,
+    namespace: string,
+    locations: LocationSpec[],
+  ): Promise<void> {
+    this.logger.info(
+      `Processing repo ${namespace} recursively for catalog files`,
+    );
+
+    const files = paginated<GitLabFile>(
+      options => this.gitLabClient.listAllFiles(namespace, options),
+      {
+        per_page: 1000,
+        page: 1,
+        recursive: true,
+      },
+    );
+
+    for await (const file of files) {
+      if (file.name === this.config.catalogFile) {
+        this.logger.info(
+          `Found catalog file ${file.path} in project ${namespace}`,
+        );
+        locations.push(this.createLocationSpec(project, file.path));
+      }
+    }
+  }
+
+  private createLocationSpec(
+    project: GitLabProject,
+    catalogFilePath: string,
+  ): LocationSpec {
     const project_branch =
       this.config.branch ??
       project.default_branch ??
@@ -253,7 +293,7 @@ export class GitlabDiscoveryEntityProvider implements EntityProvider {
 
     return {
       type: 'url',
-      target: `${project.web_url}/-/blob/${project_branch}/${this.config.catalogFile}`,
+      target: `${project.web_url}/-/blob/${project_branch}/${catalogFilePath}`,
       presence: 'optional',
     };
   }

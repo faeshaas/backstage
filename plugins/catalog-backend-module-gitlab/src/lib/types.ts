@@ -243,6 +243,12 @@ export type GitlabProviderConfig = {
   excludeRepos?: string[];
 
   /**
+   * List of repos to include in discovery, should be the full path to the repository, e.g. `group/project`.
+   * It will search for catalog files recursively in the repo.
+   */
+  fullDiscoveryRepos?: string[];
+
+  /**
    * If true, users without a seat will be included in the catalog.
    * Group/Application Access Tokens are still filtered out but you might find service accounts or other users without a seat.
    * Defaults to `false`
@@ -384,4 +390,12 @@ export type SystemHookBaseProjectEventsSchema = {
   path_with_namespace: string;
   project_id: number;
   project_visibility: string;
+};
+
+export type GitLabFile = {
+  id: string;
+  name: string;
+  type: string;
+  path: string;
+  mode: string;
 };

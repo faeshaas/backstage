@@ -54,6 +54,8 @@ function readGitlabConfig(id: string, config: Config): GitlabProviderConfig {
     config.getOptionalBoolean('includeArchivedRepos') ?? false;
   const excludeRepos: string[] =
     config.getOptionalStringArray('excludeRepos') ?? [];
+  const fullDiscoveryRepos: string[] =
+    config.getOptionalStringArray('fullDiscoveryRepos') ?? [];
 
   const schedule = config.has('schedule')
     ? readSchedulerServiceTaskScheduleDefinitionFromConfig(
@@ -88,6 +90,7 @@ function readGitlabConfig(id: string, config: Config): GitlabProviderConfig {
     skipForkedRepos,
     includeArchivedRepos,
     excludeRepos,
+    fullDiscoveryRepos,
     restrictUsersToGroup,
     includeUsersWithoutSeat,
     membership,

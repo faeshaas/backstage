@@ -63,6 +63,7 @@ describe('config', () => {
         skipForkedRepos: false,
         includeArchivedRepos: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         restrictUsersToGroup: false,
         includeUsersWithoutSeat: false,
         membership: undefined,
@@ -109,6 +110,7 @@ describe('config', () => {
         skipForkedRepos: false,
         includeArchivedRepos: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         restrictUsersToGroup: false,
         includeUsersWithoutSeat: true,
         membership: undefined,
@@ -154,6 +156,7 @@ describe('config', () => {
         schedule: undefined,
         restrictUsersToGroup: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         skipForkedRepos: true,
         includeArchivedRepos: false,
         includeUsersWithoutSeat: false,
@@ -200,6 +203,7 @@ describe('config', () => {
         schedule: undefined,
         restrictUsersToGroup: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         skipForkedRepos: false,
         includeArchivedRepos: true,
         includeUsersWithoutSeat: false,
@@ -249,6 +253,55 @@ describe('config', () => {
         skipForkedRepos: false,
         includeArchivedRepos: false,
         excludeRepos: ['foo/bar', 'quz/qux'],
+        fullDiscoveryRepos: [],
+        includeUsersWithoutSeat: false,
+        membership: undefined,
+        topics: undefined,
+      }),
+    );
+  });
+
+  it('valid config with fullDiscoveryRepos', () => {
+    const config = new ConfigReader({
+      catalog: {
+        providers: {
+          gitlab: {
+            test: {
+              group: 'group',
+              host: 'host',
+              branch: 'not-master',
+              fallbackBranch: 'main',
+              entityFilename: 'custom-file.yaml',
+              skipForkedRepos: false,
+              fullDiscoveryRepos: ['foo/bar', 'quz/qux'],
+            },
+          },
+        },
+      },
+    });
+
+    const result = readGitlabConfigs(config);
+    expect(result).toHaveLength(1);
+    result.forEach(r =>
+      expect(r).toStrictEqual({
+        id: 'test',
+        group: 'group',
+        branch: 'not-master',
+        fallbackBranch: 'main',
+        host: 'host',
+        catalogFile: 'custom-file.yaml',
+        projectPattern: /[\s\S]*/,
+        groupPattern: /[\s\S]*/,
+        userPattern: /[\s\S]*/,
+        orgEnabled: false,
+        allowInherited: false,
+        relations: [],
+        schedule: undefined,
+        restrictUsersToGroup: false,
+        skipForkedRepos: false,
+        includeArchivedRepos: false,
+        excludeRepos: [],
+        fullDiscoveryRepos: ['foo/bar', 'quz/qux'],
         includeUsersWithoutSeat: false,
         membership: undefined,
         topics: undefined,
@@ -296,6 +349,7 @@ describe('config', () => {
         includeArchivedRepos: false,
         restrictUsersToGroup: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         includeUsersWithoutSeat: false,
         membership: undefined,
         topics: undefined,
@@ -386,6 +440,7 @@ describe('config', () => {
         schedule: undefined,
         restrictUsersToGroup: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         skipForkedRepos: false,
         includeUsersWithoutSeat: false,
         includeArchivedRepos: false,
@@ -432,6 +487,7 @@ describe('config', () => {
         schedule: undefined,
         restrictUsersToGroup: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         skipForkedRepos: false,
         includeUsersWithoutSeat: false,
         includeArchivedRepos: false,
@@ -478,6 +534,7 @@ describe('config', () => {
         schedule: undefined,
         restrictUsersToGroup: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         skipForkedRepos: false,
         includeUsersWithoutSeat: false,
         includeArchivedRepos: false,
@@ -524,6 +581,7 @@ describe('config', () => {
         schedule: undefined,
         restrictUsersToGroup: false,
         excludeRepos: [],
+        fullDiscoveryRepos: [],
         skipForkedRepos: false,
         includeUsersWithoutSeat: false,
         includeArchivedRepos: false,

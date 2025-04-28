@@ -24,6 +24,7 @@ import {
 import { LoggerService } from '@backstage/backend-plugin-api';
 import {
   GitLabDescendantGroupsResponse,
+  GitLabFile,
   GitLabGroup,
   GitLabGroupMembersResponse,
   GitLabProject,
@@ -83,6 +84,19 @@ export class GitLabClient {
     }
 
     return this.pagedRequest(`/projects`, options);
+  }
+
+  async listAllFiles(
+    projectPath: string,
+    options?: ListProjectOptions,
+  ): Promise<PagedResponse<any>> {
+    return this.pagedRequest(
+      `/projects/${encodeURIComponent(projectPath)}/repository/tree/`,
+      {
+        ...options,
+        recursive: true,
+      },
+    );
   }
 
   async getProjectById(
@@ -405,7 +419,7 @@ export class GitLabClient {
       }
     }
 
-    this.logger.debug(`Fetching: ${request.toString()}`);
+    this.logger.info(`Fetching: ${request.toString()}`);
     const response = await fetch(
       request.toString(),
       getGitLabRequestOptions(this.config),
@@ -458,6 +472,37 @@ export class GitLabClient {
     }
 
     return response.json();
+  }
+
+  async getAllCatalogFiles(
+    projectPath: string,
+    catalogFile: string,
+    perPage: number = 100000,
+  ): Promise<GitLabFile[]> {
+    const endpoint: string = `/projects/${encodeURIComponent(
+      projectPath,
+    )}/repository/tree/?per_page=${perPage}&recursive=true`;
+    const request = new URL(`${this.config.apiBaseUrl}${endpoint}`);
+
+    this.logger.info(`Fetching: ${request.toString()}`);
+
+    const response = await fetch(request.toString(), {
+      headers: {
+        ...getGitLabRequestOptions(this.config).headers,
+        ['Content-Type']: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch files: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const files: GitLabFile[] = await response.json();
+
+    const catalogFiles = files.filter(file => file.name === catalogFile);
+    return catalogFiles;
   }
 }
 
